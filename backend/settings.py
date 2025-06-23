@@ -140,20 +140,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Configuração de STATIC_ROOT otimizada para Vercel
-if IS_VERCEL:
-    # No Vercel, usar /tmp para arquivos temporários
-    STATIC_ROOT = '/tmp/staticfiles'
-else:
-    # Localmente, usar o diretório padrão
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Criar o diretório staticfiles se não existir
-try:
-    os.makedirs(STATIC_ROOT, exist_ok=True)
-except (OSError, PermissionError):
-    # Se não conseguir criar (comum no Vercel), usar um diretório temporário
-    import tempfile
-    STATIC_ROOT = tempfile.mkdtemp(prefix='staticfiles_')
+# No Vercel, o único local gravável é /tmp. O build.py criará este diretório.
+STATIC_ROOT = '/tmp/staticfiles'
 
 # WhiteNoise configuração otimizada
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

@@ -1,0 +1,49 @@
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+media/
+staticfiles/
+
+# Segurança
+*.pem
+*.key
+*.crt
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Vercel
+.vercel/
+
+# Railway
+.railway/
+
+# Ambiente virtual Python
+venv/
+
+# Arquivo de ambiente principal
+.env
+
+# Cobertura de testes
+.coverage
+
+# Cache do mypy
+.mypy_cache/
+
+.vercel

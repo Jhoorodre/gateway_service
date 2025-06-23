@@ -13,11 +13,11 @@
   "routes": [
     {
       "src": "/static/(.*)",
-      "dest": "/backend/wsgi.py"
+      "dest": "backend/wsgi.py"
     },
     {
       "src": "/(.*)",
-      "dest": "/backend/wsgi.py"
+      "dest": "backend/wsgi.py"
     }
   ]
 }

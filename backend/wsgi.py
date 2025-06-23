@@ -1,10 +1,6 @@
 """
 WSGI config for backend project.
-
-It exposes the WSGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
+Optimized for Vercel deployment.
 """
 
 import os
@@ -19,14 +15,12 @@ if str(project_root) not in sys.path:
 # Set the Django settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
-try:
-    from django.core.wsgi import get_wsgi_application
-    application = get_wsgi_application()
-except ImportError as e:
-    # Log the error for debugging
-    print(f"Error importing Django WSGI application: {e}")
-    raise
+# Import Django WSGI application
+from django.core.wsgi import get_wsgi_application
 
-# Export for different deployment platforms
+# Create the WSGI application
+application = get_wsgi_application()
+
+# Vercel compatibility - export as different names
 app = application
 handler = application

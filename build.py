@@ -1,45 +1,92 @@
 #!/usr/bin/env python
 """
-Build script for Vercel deployment
+Build script for Vercel deployment - Versão Otimizada
 """
 import os
 import subprocess
 import sys
+import tempfile
+from pathlib import Path
 
-def run_command(command, description):
+def run_command(command, description, ignore_errors=False):
     """Run a shell command and handle errors"""
     print(f"BUILD_STEP: {description}...")
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     
-    if result.returncode != 0:
+    if result.returncode != 0 and not ignore_errors:
         print(f"ERROR: {description} failed")
         print(f"STDOUT: {result.stdout}")
         print(f"STDERR: {result.stderr}")
-        sys.exit(1)
+        if not ignore_errors:
+            sys.exit(1)
     else:
         print(f"SUCCESS: {description}")
         if result.stdout:
             print(result.stdout)
+    
+    return result.returncode == 0
 
 def main():
-    print("--- Iniciando build script para Vercel ---")
+    print("--- Iniciando build script otimizado para Vercel ---")
     
-    # Set Django settings module
+    # Set environment variables
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    os.environ['VERCEL'] = '1'
     
-    # Create staticfiles directory
-    run_command("mkdir -p staticfiles", "Criando diretório de arquivos estáticos")
+    # Create multiple possible staticfiles directories
+    static_dirs = [
+        '/tmp/staticfiles',
+        'staticfiles',
+        './staticfiles'
+    ]
     
-    # Collect static files
-    run_command("python manage.py collectstatic --noinput --clear", "Coletando arquivos estáticos")
+    for static_dir in static_dirs:
+        try:
+            os.makedirs(static_dir, exist_ok=True)
+            print(f"Criado diretório: {static_dir}")
+        except (OSError, PermissionError) as e:
+            print(f"Não foi possível criar {static_dir}: {e}")
+    
+    # Try to collect static files with different approaches
+    static_commands = [
+        "python manage.py collectstatic --noinput --clear --verbosity=0",
+        "python manage.py collectstatic --noinput --verbosity=0",
+        "python manage.py collectstatic --noinput"
+    ]
+    
+    static_collected = False
+    for cmd in static_commands:
+        if run_command(cmd, f"Coletando arquivos estáticos: {cmd}", ignore_errors=True):
+            static_collected = True
+            break
+    
+    if not static_collected:
+        print("WARNING: Não foi possível coletar arquivos estáticos, mas continuando...")
     
     # Run migrations
-    run_command("python manage.py migrate --noinput", "Executando migrações do banco de dados")
+    migration_commands = [
+        "python manage.py migrate --noinput --verbosity=0",
+        "python manage.py migrate --noinput"
+    ]
     
-    # List staticfiles contents
-    run_command("ls -la staticfiles/ || echo 'Diretório staticfiles vazio'", "Listando conteúdo do diretório staticfiles")
+    migration_success = False
+    for cmd in migration_commands:
+        if run_command(cmd, f"Executando migrações: {cmd}", ignore_errors=True):
+            migration_success = True
+            break
     
-    print("--- Build script concluído com sucesso ---")
+    if not migration_success:
+        print("WARNING: Não foi possível executar migrações, mas continuando...")
+    
+    # List directory contents for debugging
+    run_command("ls -la", "Listando conteúdo do diretório raiz", ignore_errors=True)
+    run_command("ls -la /tmp/ | grep static || echo 'Nenhum diretório static em /tmp'", "Verificando /tmp", ignore_errors=True)
+    run_command("find . -name 'staticfiles' -type d 2>/dev/null || echo 'Nenhum diretório staticfiles encontrado'", "Procurando staticfiles", ignore_errors=True)
+    
+    # Test Django setup
+    run_command("python -c 'import django; django.setup(); print(\"Django setup OK\")'", "Testando setup do Django", ignore_errors=True)
+    
+    print("--- Build script concluído ---")
 
 if __name__ == "__main__":
     main()

@@ -4,7 +4,7 @@ Optimized for Vercel deployment.
 """
 
 import os
-import sys  # Adicionado sys
+import sys
 from pathlib import Path
 from decouple import config
 
@@ -19,29 +19,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='uma_chave_secreta_local_padrao_deve_ser_forte')
 
+# Detectar se estamos no Vercel
+IS_VERCEL = os.environ.get('VERCEL') == '1'
+
 # Forçar DEBUG = True se estivermos usando o runserver localmente
-# Isso simplifica a configuração de ALLOWED_HOSTS para desenvolvimento.
-# A variável de ambiente DJANGO_DEBUG ainda pode sobrescrever isso se definida explicitamente.
 DEBUG_FOR_RUNSERVER = ('runserver' in sys.argv)
-DEBUG = config('DJANGO_DEBUG', default=DEBUG_FOR_RUNSERVER, cast=bool)
+DEBUG = config('DJANGO_DEBUG', default=DEBUG_FOR_RUNSERVER and not IS_VERCEL, cast=bool)
 
 # Hosts - Configuração específica para Vercel e desenvolvimento
-if DEBUG:
-    # Para desenvolvimento (incluindo runserver local), permitir hosts mais flexíveis.
+if DEBUG and not IS_VERCEL:
+    # Para desenvolvimento local
     ALLOWED_HOSTS = ['*', '127.0.0.1', 'localhost']
 else:
-    # Para produção (DEBUG=False), usar a variável de ambiente DJANGO_ALLOWED_HOSTS.
-    # O padrão é restrito a '.vercel.app' se a variável não estiver definida.
+    # Para produção (incluindo Vercel)
     allowed_hosts_env = os.getenv('DJANGO_ALLOWED_HOSTS')
     if allowed_hosts_env:
         ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
     else:
-        # Fallback para produção se DJANGO_ALLOWED_HOSTS não estiver definida.
-        # Adicione o domínio de produção real aqui se não for apenas .vercel.app
-        ALLOWED_HOSTS = [host.strip() for host in os.getenv('VERCEL_URL', '.vercel.app').split(',') if host.strip()]
-        if not ALLOWED_HOSTS: # Último recurso
-             ALLOWED_HOSTS = ['.vercel.app']
-
+        # Fallback para Vercel
+        vercel_url = os.getenv('VERCEL_URL', '')
+        if vercel_url:
+            ALLOWED_HOSTS = [vercel_url, f"https://{vercel_url}", '.vercel.app']
+        else:
+            ALLOWED_HOSTS = ['.vercel.app']
 
 # Application definition
 INSTALLED_APPS = [
@@ -62,7 +62,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',  # Adicionado
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -90,11 +90,10 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database configuration
 _raw_db_url = config('DATABASE_URL', default=None)
-DATABASE_URL_FROM_ENV: str | None = None  # Inicializa com tipo explícito
+DATABASE_URL_FROM_ENV: str | None = None
 
-if isinstance(_raw_db_url, str) and _raw_db_url.strip(): # Garante que é uma string não vazia
+if isinstance(_raw_db_url, str) and _raw_db_url.strip():
     DATABASE_URL_FROM_ENV = _raw_db_url
-# Se _raw_db_url for None ou uma string vazia, DATABASE_URL_FROM_ENV permanece None.
 
 # Verifica se dj_database_url foi importado com sucesso e DATABASE_URL_FROM_ENV é uma string válida
 if DATABASE_URL_FROM_ENV is not None and dj_database_url is not None:
@@ -139,13 +138,29 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Criação automática do diretório staticfiles se não existir
-os.makedirs(STATIC_ROOT, exist_ok=True)
+# Configuração de STATIC_ROOT otimizada para Vercel
+if IS_VERCEL:
+    # No Vercel, usar /tmp para arquivos temporários
+    STATIC_ROOT = '/tmp/staticfiles'
+else:
+    # Localmente, usar o diretório padrão
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# WhiteNoise para servir arquivos estáticos
+# Criar o diretório staticfiles se não existir
+try:
+    os.makedirs(STATIC_ROOT, exist_ok=True)
+except (OSError, PermissionError):
+    # Se não conseguir criar (comum no Vercel), usar um diretório temporário
+    import tempfile
+    STATIC_ROOT = tempfile.mkdtemp(prefix='staticfiles_')
+
+# WhiteNoise configuração otimizada
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Configurações adicionais do WhiteNoise para Vercel
+WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'br']
+WHITENOISE_MAX_AGE = 31536000  # 1 ano
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
@@ -165,21 +180,44 @@ REST_FRAMEWORK = {
 EXTERNAL_PROVIDER_API_URL = config('EXTERNAL_PROVIDER_API_URL', default='https://seu-servidor-suwayomi.com/api/graphql')
 EXTERNAL_PROVIDER_BASE_URL = config('EXTERNAL_PROVIDER_BASE_URL', default='https://seu-servidor-suwayomi.com')
 
-# Logging para debug
+# Logging otimizado para Vercel
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',
+        'level': 'INFO' if IS_VERCEL else 'DEBUG',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
 
 # Rate Limiting
-# Você pode ajustar este valor conforme necessário ou defini-lo através de variáveis de ambiente
 RATE_LIMIT_PER_MINUTE = config('DJANGO_RATE_LIMIT_PER_MINUTE', default=100, cast=int)
+
+# Configurações de segurança para produção
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'

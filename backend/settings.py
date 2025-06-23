@@ -142,12 +142,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
-
-# Configurações para servir arquivos estáticos em produção
+# Static files configuration for Vercel
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Django 4.2+ STORAGES configuration
+# Additional static files directories (se você tiver arquivos estáticos personalizados)
+STATICFILES_DIRS = [
+    # os.path.join(BASE_DIR, 'static'),  # Descomente se você tiver uma pasta 'static' no projeto
+]
+
+# WhiteNoise configuration
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Ensure STORAGES is properly configured for Django 4.2+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -292,8 +299,6 @@ LOGGING = {
 # Configurações adicionais para produção
 # Removida a lógica duplicada de DATABASES['default']['OPTIONS'] para sslmode,
 # pois idealmente dj_database_url.config com ssl_require=True ou a própria DATABASE_URL já cuidam disso.
-# Se o Vercel Postgres sempre fornecer uma URL com sslmode=require, a opção ssl_require em dj_database_url.config
-# pode ser suficiente ou até mesmo desnecessária se a URL já for completa.
 # A configuração original era:
 # if os.getenv('DATABASE_URL'):
 #     DATABASES['default']['OPTIONS'] = {
@@ -308,3 +313,12 @@ EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.Em
 if not DEBUG:
     DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@cubari-proxy.com')
     SERVER_EMAIL = os.getenv('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+
+# Para debugging em produção (remova depois de resolver)
+if not DEBUG:
+    LOGGING['loggers']['django']['level'] = 'DEBUG'
+    LOGGING['loggers']['whitenoise'] = {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+        'propagate': False,
+    }

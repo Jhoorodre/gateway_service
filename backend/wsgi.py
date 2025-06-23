@@ -12,4 +12,9 @@ from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
+# This is what Vercel looks for
 application = get_wsgi_application()
+
+# Alternative names for compatibility
+app = application
+handler = application

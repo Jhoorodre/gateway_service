@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-from decouple import config # Adicionado
+from decouple import config
 
 # Import condicional do dj_database_url (só se estiver instalado)
 try:
@@ -23,16 +23,15 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('DJANGO_SECRET_KEY', default='uma_chave_secreta_local_padrao_deve_ser_forte') # Modificado
+SECRET_KEY = config('DJANGO_SECRET_KEY', default='uma_chave_secreta_local_padrao_deve_ser_forte')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DJANGO_DEBUG', default=True, cast=bool) # Modificado
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,.vercel.app').split(',')
-
+# Updated ALLOWED_HOSTS for Vercel
+ALLOWED_HOSTS = ['*'] if DEBUG else os.getenv('DJANGO_ALLOWED_HOSTS', '.vercel.app').split(',')
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,16 +39,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',  # <--- ADICIONE ESTA LINHA
+    'corsheaders',
     'rest_framework',
-    'api', # Nosso app da API
+    'api',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Adicionar WhiteNoise para servir estáticos
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # <--- ADICIONE ESTA LINHA
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -77,29 +76,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-# Configuração para produção (Vercel) e desenvolvimento local.
-# Se a variável de ambiente DATABASE_URL estiver definida (em produção no Vercel),
-# usaremos o PostgreSQL. Caso contrário, usaremos SQLite para desenvolvimento local.
-DATABASE_URL_FROM_ENV = config('DATABASE_URL', default=None) # Modificado para usar config
+# Database configuration
+DATABASE_URL_FROM_ENV = config('DATABASE_URL', default=None)
 
 if DATABASE_URL_FROM_ENV and dj_database_url:
     DATABASES = {
         'default': dj_database_url.config(
-            default=DATABASE_URL_FROM_ENV, # Usar a variável já lida
+            default=DATABASE_URL_FROM_ENV,
             conn_max_age=600,
-            conn_health_checks=True, # Adicionado pelo guia
-            ssl_require=config('DJANGO_DB_SSL_REQUIRE', default=True, cast=bool) # Mantendo flexibilidade para SSL
+            conn_health_checks=True,
+            ssl_require=config('DJANGO_DB_SSL_REQUIRE', default=True, cast=bool)
         )
     }
-    # A configuração de 'sslmode': 'require' é geralmente tratada pelo dj_database_url se a URL incluir ?sslmode=require
-    # ou pode ser passada via 'OPTIONS'. Se dj_database_url.config não lida com isso automaticamente
-    # baseado na string de conexão, e você precisa forçar, pode ser necessário adicionar:
-    # DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
-    # No entanto, o Vercel Postgres geralmente inclui sslmode=require na DATABASE_URL.
 else:
     DATABASES = {
         'default': {
@@ -109,8 +97,6 @@ else:
     }
 
 # Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -126,35 +112,20 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/5.0/topics/i18n/
-
 LANGUAGE_CODE = 'pt-br'
-
 TIME_ZONE = 'America/Sao_Paulo'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-# Static files configuration for Vercel
+# Static files configuration
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-# Additional static files directories (se você tiver arquivos estáticos personalizados)
-STATICFILES_DIRS = [
-    # os.path.join(BASE_DIR, 'static'),  # Descomente se você tiver uma pasta 'static' no projeto
-]
 
 # WhiteNoise configuration
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Ensure STORAGES is properly configured for Django 4.2+
+# Storage configuration for Django 4.2+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -164,43 +135,34 @@ STORAGES = {
     },
 }
 
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Configuração da URL da API do ExternalProvider-Server
-EXTERNAL_PROVIDER_API_URL = os.getenv('EXTERNAL_PROVIDER_API_URL') or ''
-EXTERNAL_PROVIDER_BASE_URL = os.getenv('EXTERNAL_PROVIDER_BASE_URL') or ''
-EXTERNAL_PROVIDER_API_URL_2 = os.getenv('EXTERNAL_PROVIDER_API_URL_2') or ''
-EXTERNAL_PROVIDER_BASE_URL_2 = os.getenv('EXTERNAL_PROVIDER_BASE_URL_2') or ''
+# External provider configuration
+EXTERNAL_PROVIDER_API_URL = os.getenv('EXTERNAL_PROVIDER_API_URL', '')
+EXTERNAL_PROVIDER_BASE_URL = os.getenv('EXTERNAL_PROVIDER_BASE_URL', '')
+EXTERNAL_PROVIDER_API_URL_2 = os.getenv('EXTERNAL_PROVIDER_API_URL_2', '')
+EXTERNAL_PROVIDER_BASE_URL_2 = os.getenv('EXTERNAL_PROVIDER_BASE_URL_2', '')
 
-# Configurações do Django REST framework (opcional, mas bom para ter)
+# Django REST framework configuration
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny' # Ou mais restritivo, conforme necessário
+        'rest_framework.permissions.AllowAny'
     ]
 }
 
-# Carrega a string de origens permitidas do .env
+# CORS configuration
 cors_origins_csv = os.getenv('DJANGO_CORS_ALLOWED_ORIGINS_CSV', '')
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_csv.split(',') if origin.strip()]
 
-# Fallback para desenvolvimento local se DJANGO_CORS_ALLOWED_ORIGINS_CSV não estiver definido ou estiver vazio
+# Fallback for development
 if not CORS_ALLOWED_ORIGINS and DEBUG:
     CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
-    print("AVISO: DJANGO_CORS_ALLOWED_ORIGINS_CSV não definido ou vazio no .env. Usando fallback: [\"http://localhost:3000\"]")
-elif not CORS_ALLOWED_ORIGINS and not DEBUG:
-    print("ERRO: DJANGO_CORS_ALLOWED_ORIGINS_CSV não definido ou vazio no .env e DEBUG é False. Nenhuma origem CORS será permitida.")
-    # Em um cenário de produção real, você pode querer lançar um erro ou ter uma lista padrão mais restrita.
+elif not CORS_ALLOWED_ORIGINS:
+    # For production, allow all origins if not specified (adjust as needed)
+    CORS_ALLOW_ALL_ORIGINS = True
 
-# Permitir cookies em requisições CORS se necessário
 CORS_ALLOW_CREDENTIALS = True
 
-# Headers permitidos
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -214,111 +176,25 @@ CORS_ALLOW_HEADERS = [
     'cache-control',
 ]
 
-# === Configurações de Rate Limiting ===
+# Rate limiting configuration
 RATELIMIT_ENABLE = True
-RATELIMIT_USE_CACHE = 'default'  # Use Redis em produção
-RATELIMIT_VIEW = 'api.views.rate_limited'
+RATELIMIT_USE_CACHE = 'default'
 
-# Cache configuration
+# Cache configuration - simplified for Vercel
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-    } if os.getenv('REDIS_URL') else {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'unique-snowflake',
     }
 }
 
-# Configurações customizadas do ExternalProvider
-RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE') or '60')
-EXTERNAL_PROVIDER_TIMEOUT = int(os.getenv('EXTERNAL_PROVIDER_TIMEOUT') or '30')
+# Custom settings
+RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '60'))
+EXTERNAL_PROVIDER_TIMEOUT = int(os.getenv('EXTERNAL_PROVIDER_TIMEOUT', '30'))
 
-
-# Configurações de segurança para produção
+# Security settings for production
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_BROWSER_XSS_FILTER = True
-    X_FRAME_OPTIONS = 'DENY'
-    
-    # Configurações adicionais de segurança
-    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
-    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SESSION_COOKIE_HTTPONLY = True
-    CSRF_COOKIE_HTTPONLY = True
-    
-    # Adicionado para cache de sessão em produção
-    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-
-# Configuração de Logging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose' if DEBUG else 'simple',
-        },
-        # O handler 'file' foi removido pois não é compatível com o sistema de arquivos da Vercel
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],  # Modificado para sempre usar o console
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'api': {
-            'handlers': ['console'],  # Modificado para sempre usar o console
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-        },
-    },
-}
-
-# Configurações adicionais para produção
-# Removida a lógica duplicada de DATABASES['default']['OPTIONS'] para sslmode,
-# pois idealmente dj_database_url.config com ssl_require=True ou a própria DATABASE_URL já cuidam disso.
-# A configuração original era:
-# if os.getenv('DATABASE_URL'):
-#     DATABASES['default']['OPTIONS'] = {
-#         'sslmode': 'require',
-#     }
-
-# Timeout para requisições HTTP
-DEFAULT_HTTP_TIMEOUT = int(os.getenv('DEFAULT_HTTP_TIMEOUT') or '30')
-
-# Configurações de email (se necessário no futuro)
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-if not DEBUG:
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@cubari-proxy.com')
-    SERVER_EMAIL = os.getenv('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
-
-# Para debugging em produção (remova depois de resolver)
-if not DEBUG:
-    LOGGING['loggers']['django']['level'] = 'DEBUG'
-    LOGGING['loggers']['whitenoise'] = {
-        'handlers': ['console'],
-        'level': 'DEBUG',
-        'propagate': False,
-    }

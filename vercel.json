@@ -2,13 +2,6 @@
   "version": 2,
   "builds": [
     {
-      "src": "build_files_gateway.sh",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "staticfiles"
-      }
-    },
-    {
       "src": "backend/wsgi.py",
       "use": "@vercel/python",
       "config": {
@@ -29,5 +22,10 @@
   ],
   "env": {
     "DJANGO_SETTINGS_MODULE": "backend.settings"
+  },
+  "functions": {
+    "backend/wsgi.py": {
+      "includeFiles": "staticfiles/**"
+    }
   }
 }

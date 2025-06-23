@@ -256,7 +256,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
         'simple': {
@@ -269,11 +269,7 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose' if DEBUG else 'simple',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
-            'formatter': 'verbose',
-        },
+        # O handler 'file' foi removido pois não é compatível com o sistema de arquivos da Vercel
     },
     'root': {
         'handlers': ['console'],
@@ -281,12 +277,12 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'] if not DEBUG else ['console'],
+            'handlers': ['console'],  # Modificado para sempre usar o console
             'level': 'INFO',
             'propagate': False,
         },
-        'api': {  # Log específico para nossa API
-            'handlers': ['console', 'file'] if not DEBUG else ['console'],
+        'api': {
+            'handlers': ['console'],  # Modificado para sempre usar o console
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },

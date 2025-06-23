@@ -8,6 +8,13 @@
         "maxLambdaSize": "15mb",
         "runtime": "python3.9"
       }
+    },
+    {
+      "src": "build.py",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9"
+      }
     }
   ],
   "routes": [
@@ -19,13 +26,5 @@
       "src": "/(.*)",
       "dest": "backend/wsgi.py"
     }
-  ],
-  "env": {
-    "DJANGO_SETTINGS_MODULE": "backend.settings"
-  },
-  "functions": {
-    "backend/wsgi.py": {
-      "includeFiles": "staticfiles/**"
-    }
-  }
+  ]
 }

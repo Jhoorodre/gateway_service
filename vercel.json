@@ -6,7 +6,8 @@
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "15mb",
-        "runtime": "python3.11"
+        "runtime": "python3.11",
+        "maxDuration": 30
       }
     }
   ],
@@ -19,11 +20,6 @@
   "env": {
     "DJANGO_SETTINGS_MODULE": "backend.settings",
     "VERCEL": "1"
-  },
-  "functions": {
-    "backend/wsgi.py": {
-      "maxDuration": 30
-    }
   },
   "buildCommand": "python scripts/build.py"
 }

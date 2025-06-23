@@ -346,3 +346,9 @@ class SourceFiltersView(APIView):
 
         except Exception as e:
             return JsonResponse({'error': f'Erro interno no servidor: {str(e)}'}, status=500)
+
+def home(request):
+    """
+    View para a página inicial que retorna uma mensagem de status em JSON.
+    """
+    return JsonResponse({'status': 'ok', 'message': 'Servidor Gateway está no ar e funcionando!'})

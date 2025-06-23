@@ -4,7 +4,6 @@ Optimized for Vercel deployment.
 """
 
 import os
-import sys  # Adicionado sys
 from pathlib import Path
 from decouple import config
 
@@ -18,30 +17,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='uma_chave_secreta_local_padrao_deve_ser_forte')
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
-# Forçar DEBUG = True se estivermos usando o runserver localmente
-# Isso simplifica a configuração de ALLOWED_HOSTS para desenvolvimento.
-# A variável de ambiente DJANGO_DEBUG ainda pode sobrescrever isso se definida explicitamente.
-DEBUG_FOR_RUNSERVER = ('runserver' in sys.argv)
-DEBUG = config('DJANGO_DEBUG', default=DEBUG_FOR_RUNSERVER, cast=bool)
-
-# Hosts - Configuração específica para Vercel e desenvolvimento
+# Hosts - Configuração específica para Vercel
 if DEBUG:
-    # Para desenvolvimento (incluindo runserver local), permitir hosts mais flexíveis.
-    ALLOWED_HOSTS = ['*', '127.0.0.1', 'localhost']
+    ALLOWED_HOSTS = ['*']
 else:
-    # Para produção (DEBUG=False), usar a variável de ambiente DJANGO_ALLOWED_HOSTS.
-    # O padrão é restrito a '.vercel.app' se a variável não estiver definida.
-    allowed_hosts_env = os.getenv('DJANGO_ALLOWED_HOSTS')
-    if allowed_hosts_env:
-        ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
-    else:
-        # Fallback para produção se DJANGO_ALLOWED_HOSTS não estiver definida.
-        # Adicione o domínio de produção real aqui se não for apenas .vercel.app
-        ALLOWED_HOSTS = [host.strip() for host in os.getenv('VERCEL_URL', '.vercel.app').split(',') if host.strip()]
-        if not ALLOWED_HOSTS: # Último recurso
-             ALLOWED_HOSTS = ['.vercel.app']
-
+    allowed_hosts_env = os.getenv('DJANGO_ALLOWED_HOSTS', '.vercel.app')
+    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
+    if not ALLOWED_HOSTS:
+        ALLOWED_HOSTS = ['.vercel.app']
 
 # Application definition
 INSTALLED_APPS = [
@@ -62,7 +47,6 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',  # Adicionado
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -128,38 +112,101 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# Static files - Configuração otimizada para Vercel
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Criação automática do diretório staticfiles se não existir
+# Ensure staticfiles directory exists
 os.makedirs(STATIC_ROOT, exist_ok=True)
 
-# WhiteNoise para servir arquivos estáticos
+# WhiteNoise configuration
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# CORS
-CORS_ALLOW_ALL_ORIGINS = True
+# Storage configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
-# REST Framework
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# External provider configuration
+EXTERNAL_PROVIDER_API_URL = os.getenv('EXTERNAL_PROVIDER_API_URL', '')
+EXTERNAL_PROVIDER_BASE_URL = os.getenv('EXTERNAL_PROVIDER_BASE_URL', '')
+EXTERNAL_PROVIDER_API_URL_2 = os.getenv('EXTERNAL_PROVIDER_API_URL_2', '')
+EXTERNAL_PROVIDER_BASE_URL_2 = os.getenv('EXTERNAL_PROVIDER_BASE_URL_2', '')
+
+# Django REST framework
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.AllowAny'
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
     ],
 }
 
-# External Provider URLs
-EXTERNAL_PROVIDER_API_URL = config('EXTERNAL_PROVIDER_API_URL', default='https://seu-servidor-suwayomi.com/api/graphql')
-EXTERNAL_PROVIDER_BASE_URL = config('EXTERNAL_PROVIDER_BASE_URL', default='https://seu-servidor-suwayomi.com')
+# CORS configuration
+cors_origins_csv = os.getenv('DJANGO_CORS_ALLOWED_ORIGINS_CSV', '')
+if cors_origins_csv:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_csv.split(',') if origin.strip()]
+elif DEBUG:
+    CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+else:
+    CORS_ALLOW_ALL_ORIGINS = True
 
-# Logging para debug
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'cache-control',
+]
+
+# Rate limiting
+RATELIMIT_ENABLE = True
+RATELIMIT_USE_CACHE = 'default'
+
+# Cache - Otimizado para Vercel (sem Redis externo)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 300,
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Custom settings
+RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '60'))
+EXTERNAL_PROVIDER_TIMEOUT = int(os.getenv('EXTERNAL_PROVIDER_TIMEOUT', '30'))
+
+# Security settings for production
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
+
+# Logging configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -170,10 +217,13 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',
+        'level': 'INFO' if DEBUG else 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO' if DEBUG else 'WARNING',
+            'propagate': False,
+        },
     },
 }
-
-# Rate Limiting
-# Você pode ajustar este valor conforme necessário ou defini-lo através de variáveis de ambiente
-RATE_LIMIT_PER_MINUTE = config('DJANGO_RATE_LIMIT_PER_MINUTE', default=100, cast=int)

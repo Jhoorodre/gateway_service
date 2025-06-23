@@ -25,5 +25,5 @@
       "maxDuration": 30
     }
   },
-  "buildCommand": "python build.py"
+  "buildCommand": "python scripts/build.py"
 }

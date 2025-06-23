@@ -27,5 +27,6 @@
     "backend/wsgi.py": {
       "maxDuration": 30
     }
-  }
+  },
+  "buildCommand": "python manage.py collectstatic --noinput"
 }

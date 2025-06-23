@@ -89,12 +89,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database configuration
-DATABASE_URL_FROM_ENV = config('DATABASE_URL', default=None)
+_raw_db_url = config('DATABASE_URL', default=None)
+DATABASE_URL_FROM_ENV: str | None = None  # Inicializa com tipo explícito
 
-if DATABASE_URL_FROM_ENV and dj_database_url:
+if isinstance(_raw_db_url, str) and _raw_db_url.strip(): # Garante que é uma string não vazia
+    DATABASE_URL_FROM_ENV = _raw_db_url
+# Se _raw_db_url for None ou uma string vazia, DATABASE_URL_FROM_ENV permanece None.
+
+# Verifica se dj_database_url foi importado com sucesso e DATABASE_URL_FROM_ENV é uma string válida
+if DATABASE_URL_FROM_ENV is not None and dj_database_url is not None:
     DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL_FROM_ENV,
+        'default': dj_database_url.parse(
+            DATABASE_URL_FROM_ENV,
             conn_max_age=600,
             conn_health_checks=True,
         )

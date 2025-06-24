@@ -43,6 +43,14 @@ else:
         else:
             ALLOWED_HOSTS = ['.vercel.app']
 
+# CSRF Trusted Origins para produção no Fly.io
+# Adicione o seu domínio do Fly.io aqui
+CSRF_TRUSTED_ORIGINS = [f'https://{host}' for host in ALLOWED_HOSTS if '.fly.dev' in host]
+# Se ALLOWED_HOSTS não contiver o domínio .fly.dev de forma dinâmica,
+# você pode definir diretamente:
+# CSRF_TRUSTED_ORIGINS = ['https://gateway-service-delicate-forest-333.fly.dev']
+
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -139,9 +147,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 
-# Configuração de STATIC_ROOT otimizada para Vercel
-# No Vercel, o único local gravável é /tmp. O build.py criará este diretório.
-STATIC_ROOT = '/tmp/staticfiles'
+# Configuração de STATIC_ROOT para produção
+# Os arquivos serão coletados para o diretório 'staticfiles' na raiz do projeto.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # WhiteNoise configuração otimizada
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
